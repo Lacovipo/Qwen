@@ -291,6 +291,26 @@ static int negamax(Board *b, int alpha, int beta, int depth, int ply, SearchInfo
         if (null_score >= beta) return beta;
     }
 
+    if (!pv_node && depth >= 5 && !in_check && abs(beta) < MATE_IN_MAX) {
+        int probcut_beta = beta + 150;
+        MoveList cap_list;
+        movegen_generate_captures(b, &cap_list);
+
+        for (int i = 0; i < cap_list.count; i++) {
+            if (see(b, cap_list.moves[i]) < 0) continue;
+
+            board_make_move(b, cap_list.moves[i]);
+            int score = -quiesce(b, -probcut_beta, -probcut_beta + 1, info, ply + 1);
+            if (score >= probcut_beta) {
+                score = -negamax(b, -probcut_beta, -probcut_beta + 1, depth - 4, ply + 1, info, false);
+            }
+            board_unmake_move(b, cap_list.moves[i]);
+
+            if (info->stopped) return 0;
+            if (score >= probcut_beta) return probcut_beta;
+        }
+    }
+
     bool do_futility = false;
     int static_eval = 0;
     if (!in_check && !pv_node && depth <= 6) {
@@ -299,6 +319,15 @@ static int negamax(Board *b, int alpha, int beta, int depth, int ply, SearchInfo
             return static_eval;
         if (depth <= 4 && static_eval + 300 * depth < alpha)
             do_futility = true;
+    }
+
+    if (!pv_node && !in_check && depth <= 4) {
+        int static_eval = eval_evaluate(b);
+        if (static_eval + 150 + 100 * depth <= alpha) {
+            int qs_score = quiesce(b, alpha, beta, info, ply);
+            if (qs_score <= alpha)
+                return qs_score;
+        }
     }
 
     MoveList list;

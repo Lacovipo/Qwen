@@ -10,7 +10,7 @@
 
 #define ENGINE_NAME "Qwen"
 #define ENGINE_AUTHOR "Qwen"
-#define ENGINE_VERSION "1.1"
+#define ENGINE_VERSION "1.2"
 
 #define MAX_PLY 128
 #define MAX_MOVES 256
